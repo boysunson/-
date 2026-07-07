@@ -19,6 +19,19 @@
             <div class="status-bar">
                 <span class="status-dot" id="statusDot"></span>
                 <span id="statusText">检查中...</span>
+                <button class="btn btn-config" id="configBtn">⚙️</button>
+            </div>
+
+            <div class="config-panel" id="configPanel">
+                <h3>ComfyUI 连接配置</h3>
+                <div class="form-group">
+                    <label for="comfyuiUrl">ComfyUI 地址</label>
+                    <input type="text" id="comfyuiUrl" placeholder="http://127.0.0.1:8188">
+                </div>
+                <div class="config-actions">
+                    <button class="btn btn-primary" id="saveConfigBtn">保存并连接</button>
+                    <button class="btn btn-link" id="cancelConfigBtn">取消</button>
+                </div>
             </div>
         </div>
     </header>

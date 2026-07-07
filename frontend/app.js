@@ -296,7 +296,7 @@ async function checkSystemStatus() {
 
         if (data.comfyui_running) {
             dot.className = 'status-dot online';
-            text.textContent = 'ComfyUI 运行中';
+            text.textContent = 'ComfyUI 已连接';
         } else {
             dot.className = 'status-dot offline';
             text.textContent = 'ComfyUI 未连接';
@@ -309,15 +309,73 @@ async function checkSystemStatus() {
     }
 }
 
+async function loadConfig() {
+    try {
+        const res = await fetch(`${API_BASE}/api/system/config`);
+        const data = await res.json();
+        document.getElementById('comfyuiUrl').value = data.comfyui_url || '';
+    } catch (e) {
+        console.error('Failed to load config:', e);
+    }
+}
+
+async function saveConfig() {
+    const url = document.getElementById('comfyuiUrl').value.trim();
+    if (!url) {
+        alert('请输入ComfyUI地址');
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/api/system/config`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ comfyui_url: url })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            alert(data.message);
+            toggleConfigPanel();
+            checkSystemStatus();
+        } else {
+            alert(data.message);
+        }
+    } catch (e) {
+        alert('保存失败: ' + e.message);
+    }
+}
+
+function toggleConfigPanel() {
+    const panel = document.getElementById('configPanel');
+    panel.classList.toggle('active');
+}
+
+function closeConfigPanel(e) {
+    const panel = document.getElementById('configPanel');
+    const btn = document.getElementById('configBtn');
+    if (!panel.contains(e.target) && !btn.contains(e.target)) {
+        panel.classList.remove('active');
+    }
+}
+
 function init() {
     fetchWorkflows();
     loadHistory();
+    loadConfig();
     checkSystemStatus();
 
     setInterval(checkSystemStatus, 10000);
 
     document.getElementById('generateBtn').addEventListener('click', generate);
     document.getElementById('refreshHistoryBtn').addEventListener('click', loadHistory);
+
+    document.getElementById('configBtn').addEventListener('click', toggleConfigPanel);
+    document.getElementById('saveConfigBtn').addEventListener('click', saveConfig);
+    document.getElementById('cancelConfigBtn').addEventListener('click', toggleConfigPanel);
+    document.addEventListener('click', closeConfigPanel);
 }
 
 document.addEventListener('DOMContentLoaded', init);

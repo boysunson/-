@@ -15,7 +15,8 @@ CORS(app)
 
 app.config['MAX_CONTENT_LENGTH'] = Config.MAX_UPLOAD_SIZE
 
-comfy_client = ComfyUIClient()
+current_comfy_url = Config.COMFYUI_URL
+comfy_client = ComfyUIClient(current_comfy_url)
 
 
 @app.route('/')
@@ -190,6 +191,34 @@ def system_status():
         "active_tasks": active,
         "queued_tasks": queued,
     })
+
+
+@app.route('/api/system/config', methods=['GET', 'POST'])
+def system_config():
+    global comfy_client, current_comfy_url
+
+    if request.method == 'GET':
+        return jsonify({
+            "comfyui_url": comfy_client.server_url,
+            "api_port": Config.API_PORT
+        })
+
+    data = request.get_json() or {}
+    new_url = data.get('comfyui_url')
+
+    if new_url:
+        current_comfy_url = new_url
+        comfy_client = ComfyUIClient(current_comfy_url)
+
+        running = comfy_client.is_running()
+        return jsonify({
+            "success": True,
+            "comfyui_url": current_comfy_url,
+            "connected": running,
+            "message": "连接成功" if running else "配置已更新，请检查ComfyUI是否启动"
+        })
+
+    return jsonify({"success": False, "message": "缺少comfyui_url参数"}), 400
 
 
 if __name__ == '__main__':
