@@ -1,0 +1,108 @@
+{
+  "_meta": {
+    "name": "风格迁移设计",
+    "description": "基于参考图风格，将设计草图或方案转化为特定风格的效果图",
+    "category": "风格迁移",
+    "inputs": [
+      {"name": "input_image", "type": "image", "label": "设计草图/原图", "description": "上传需要转化的设计草图或原图"},
+      {"name": "reference_image", "type": "image", "label": "风格参考图", "description": "上传想要参考的风格图片"},
+      {"name": "prompt", "type": "text", "label": "正向提示词", "default": "高质量建筑效果图,真实材质,专业摄影", "description": "补充描述想要的效果"},
+      {"name": "negative_prompt", "type": "text", "label": "反向提示词", "default": "低质量,模糊,变形,扭曲,水印,文字", "description": "描述想要避免的效果"},
+      {"name": "style_strength", "type": "number", "label": "风格强度", "default": 0.7, "description": "参考图风格迁移强度，0-1之间"},
+      {"name": "denoise", "type": "number", "label": "重绘幅度", "default": 0.6, "description": "图像重绘幅度，越高变化越大"},
+      {"name": "steps", "type": "number", "label": "采样步数", "default": 30, "description": "采样步数"},
+      {"name": "cfg_scale", "type": "number", "label": "CFG比例", "default": 7, "description": "提示词遵循程度"},
+      {"name": "seed", "type": "number", "label": "随机种子", "default": -1, "description": "随机种子，-1为随机"}
+    ],
+    "outputs": [
+      {"name": "output_image", "type": "image", "label": "风格化效果图", "description": "生成的风格化建筑效果图"}
+    ]
+  },
+  "3": {
+    "inputs": {
+      "seed": -1,
+      "steps": 30,
+      "cfg": 7,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 0.6,
+      "model": ["4", 0],
+      "positive": ["6", 0],
+      "negative": ["7", 0],
+      "latent_image": ["10", 0]
+    },
+    "class_type": "KSampler"
+  },
+  "4": {
+    "inputs": {
+      "ckpt_name": "LEOSAM_HelloWorld.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple"
+  },
+  "6": {
+    "inputs": {
+      "text": "高质量建筑效果图",
+      "clip": ["4", 1]
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "7": {
+    "inputs": {
+      "text": "低质量,模糊,变形",
+      "clip": ["4", 1]
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "8": {
+    "inputs": {
+      "samples": ["3", 0],
+      "vae": ["4", 2]
+    },
+    "class_type": "VAEDecode"
+  },
+  "9": {
+    "inputs": {
+      "filename_prefix": "StyleTransfer",
+      "images": ["8", 0]
+    },
+    "class_type": "SaveImage"
+  },
+  "10": {
+    "inputs": {
+      "pixels": ["11", 0],
+      "vae": ["4", 2]
+    },
+    "class_type": "VAEEncode"
+  },
+  "11": {
+    "inputs": {
+      "image": "input.png",
+      "upload": "image"
+    },
+    "class_type": "LoadImage"
+  },
+  "12": {
+    "inputs": {
+      "ipadapter_file": "ip-adapter-plus_sd15.safetensors",
+      "clip_name": "model.clip.safetensors"
+    },
+    "class_type": "IPAdapterModelLoader"
+  },
+  "13": {
+    "inputs": {
+      "weight": 0.7,
+      "model": ["4", 0],
+      "ipadapter": ["12", 0],
+      "image": ["14", 0],
+      "clip_vision": ["12", 1]
+    },
+    "class_type": "IPAdapterApply"
+  },
+  "14": {
+    "inputs": {
+      "image": "reference.png",
+      "upload": "image"
+    },
+    "class_type": "LoadImage"
+  }
+}

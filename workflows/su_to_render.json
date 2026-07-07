@@ -1,0 +1,103 @@
+{
+  "_meta": {
+    "name": "SU模型转建筑效果图",
+    "description": "将SketchUp白模截图通过深度ControlNet控制，生成高质量建筑效果图",
+    "category": "建筑设计",
+    "inputs": [
+      {"name": "input_image", "type": "image", "label": "SU模型截图", "description": "上传SketchUp白模渲染图或截图"},
+      {"name": "prompt", "type": "text", "label": "正向提示词", "default": "现代建筑,高清渲染,真实材质,玻璃幕墙,日光照射,蓝天,环境光遮蔽", "description": "描述想要生成的建筑效果"},
+      {"name": "negative_prompt", "type": "text", "label": "反向提示词", "default": "低质量,模糊,变形,扭曲,卡通,手绘,线稿", "description": "描述想要避免的效果"},
+      {"name": "control_strength", "type": "number", "label": "结构控制强度", "default": 0.8, "description": "ControlNet深度图控制强度，越高越接近原图结构"},
+      {"name": "steps", "type": "number", "label": "采样步数", "default": 30, "description": "采样步数，越多越精细但越慢"},
+      {"name": "cfg_scale", "type": "number", "label": "CFG比例", "default": 7, "description": "提示词遵循程度"},
+      {"name": "seed", "type": "number", "label": "随机种子", "default": -1, "description": "随机种子，-1为随机"},
+      {"name": "width", "type": "number", "label": "输出宽度", "default": 1024, "description": "输出图像宽度"},
+      {"name": "height", "type": "number", "label": "输出高度", "default": 1024, "description": "输出图像高度"}
+    ],
+    "outputs": [
+      {"name": "output_image", "type": "image", "label": "效果图", "description": "生成的建筑效果图"}
+    ]
+  },
+  "3": {
+    "inputs": {
+      "seed": -1,
+      "steps": 30,
+      "cfg": 7,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1,
+      "model": ["4", 0],
+      "positive": ["6", 0],
+      "negative": ["7", 0],
+      "latent_image": ["11", 0]
+    },
+    "class_type": "KSampler"
+  },
+  "4": {
+    "inputs": {
+      "ckpt_name": "ArchitectureRealMix.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple"
+  },
+  "6": {
+    "inputs": {
+      "text": "现代建筑,高清渲染,真实材质,玻璃幕墙",
+      "clip": ["4", 1]
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "7": {
+    "inputs": {
+      "text": "低质量,模糊,变形",
+      "clip": ["4", 1]
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "8": {
+    "inputs": {
+      "samples": ["3", 0],
+      "vae": ["4", 2]
+    },
+    "class_type": "VAEDecode"
+  },
+  "9": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": ["8", 0]
+    },
+    "class_type": "SaveImage"
+  },
+  "10": {
+    "inputs": {
+      "image": "input.png",
+      "upload": "image"
+    },
+    "class_type": "LoadImage"
+  },
+  "11": {
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage"
+  },
+  "12": {
+    "inputs": {
+      "control_net_name": "control_v11f1p_sd15_depth.pth"
+    },
+    "class_type": "ControlNetLoader"
+  },
+  "13": {
+    "inputs": {
+      "strength": 0.8,
+      "start_percent": 0,
+      "end_percent": 1,
+      "control_net": ["12", 0],
+      "image": ["10", 0],
+      "positive": ["6", 0],
+      "negative": ["7", 0]
+    },
+    "class_type": "ControlNetApply"
+  }
+}

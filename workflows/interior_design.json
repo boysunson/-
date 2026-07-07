@@ -1,0 +1,112 @@
+{
+  "_meta": {
+    "name": "毛坯房转精装修",
+    "description": "将毛坯房或空房间照片转化为不同风格的精装修室内效果图",
+    "category": "室内设计",
+    "inputs": [
+      {"name": "input_image", "type": "image", "label": "毛坯房照片", "description": "上传毛坯房或空房间照片"},
+      {"name": "style", "type": "select", "label": "装修风格", "default": "现代简约", "options": ["现代简约", "北欧风", "奶油风", "侘寂风", "新中式", "工业风", "美式乡村", "日式原木"], "description": "选择装修风格"},
+      {"name": "prompt", "type": "text", "label": "正向提示词", "default": "现代简约风格客厅,精装修,高品质家具,软装饰品,自然光,真实材质,高清摄影", "description": "描述想要的室内效果"},
+      {"name": "negative_prompt", "type": "text", "label": "反向提示词", "default": "毛坯,水泥墙,低质量,模糊,变形,人物", "description": "描述想要避免的效果"},
+      {"name": "control_strength", "type": "number", "label": "空间控制强度", "default": 0.75, "description": "ControlNet对空间结构的控制强度"},
+      {"name": "denoise", "type": "number", "label": "重绘幅度", "default": 0.75, "description": "图像重绘幅度，越高变化越大"},
+      {"name": "steps", "type": "number", "label": "采样步数", "default": 35, "description": "采样步数"},
+      {"name": "cfg_scale", "type": "number", "label": "CFG比例", "default": 7, "description": "提示词遵循程度"},
+      {"name": "seed", "type": "number", "label": "随机种子", "default": -1, "description": "随机种子，-1为随机"}
+    ],
+    "outputs": [
+      {"name": "output_image", "type": "image", "label": "精装修效果图", "description": "生成的室内精装修效果图"}
+    ]
+  },
+  "3": {
+    "inputs": {
+      "seed": -1,
+      "steps": 35,
+      "cfg": 7,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 0.75,
+      "model": ["4", 0],
+      "positive": ["6", 0],
+      "negative": ["7", 0],
+      "latent_image": ["11", 0]
+    },
+    "class_type": "KSampler"
+  },
+  "4": {
+    "inputs": {
+      "ckpt_name": "realisticVisionV51_v51VAE.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple"
+  },
+  "6": {
+    "inputs": {
+      "text": "现代简约风格客厅,精装修,高品质家具",
+      "clip": ["4", 1]
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "7": {
+    "inputs": {
+      "text": "毛坯,水泥墙,低质量,模糊",
+      "clip": ["4", 1]
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "8": {
+    "inputs": {
+      "samples": ["3", 0],
+      "vae": ["4", 2]
+    },
+    "class_type": "VAEDecode"
+  },
+  "9": {
+    "inputs": {
+      "filename_prefix": "InteriorDesign",
+      "images": ["8", 0]
+    },
+    "class_type": "SaveImage"
+  },
+  "10": {
+    "inputs": {
+      "image": "input.png",
+      "upload": "image"
+    },
+    "class_type": "LoadImage"
+  },
+  "11": {
+    "inputs": {
+      "pixels": ["10", 0],
+      "vae": ["4", 2]
+    },
+    "class_type": "VAEEncode"
+  },
+  "12": {
+    "inputs": {
+      "control_net_name": "control_v11p_sd15_canny.pth"
+    },
+    "class_type": "ControlNetLoader"
+  },
+  "13": {
+    "inputs": {
+      "strength": 0.75,
+      "start_percent": 0,
+      "end_percent": 1,
+      "control_net": ["12", 0],
+      "image": ["10", 0],
+      "positive": ["6", 0],
+      "negative": ["7", 0]
+    },
+    "class_type": "ControlNetApply"
+  },
+  "14": {
+    "inputs": {
+      "lora_name": "interior_design_style.safetensors",
+      "strength_model": 0.6,
+      "strength_clip": 0.6,
+      "model": ["4", 0],
+      "clip": ["4", 1]
+    },
+    "class_type": "LoraLoader"
+  }
+}

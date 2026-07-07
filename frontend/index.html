@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>建筑AI设计辅助工具</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header-inner">
+            <div class="logo">
+                <div class="logo-icon">🏗️</div>
+                <div class="logo-text">
+                    <h1>建筑AI设计</h1>
+                    <p>本地部署 · 简单易用</p>
+                </div>
+            </div>
+            <div class="status-bar">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">检查中...</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <aside class="sidebar">
+            <h2 class="sidebar-title">工作流选择</h2>
+            <div class="workflow-list" id="workflowList">
+                <div class="loading">加载中...</div>
+            </div>
+        </aside>
+
+        <section class="content">
+            <div class="content-header">
+                <h2 id="workflowName">请选择工作流</h2>
+                <p id="workflowDesc" class="workflow-desc"></p>
+            </div>
+
+            <div class="content-body">
+                <div class="panel params-panel">
+                    <h3>参数设置</h3>
+                    <form id="paramsForm" class="params-form">
+                        <div class="empty-state" id="paramsEmpty">
+                            <p>请先选择一个工作流</p>
+                        </div>
+                    </form>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-primary btn-lg" id="generateBtn" disabled>
+                            <span class="btn-icon">✨</span>
+                            <span>开始生成</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="panel result-panel">
+                    <h3>生成结果</h3>
+                    <div class="result-area" id="resultArea">
+                        <div class="empty-state" id="resultEmpty">
+                            <div class="empty-icon">🖼️</div>
+                            <p>生成的效果图将在这里显示</p>
+                        </div>
+                        <div class="result-images" id="resultImages"></div>
+                        <div class="progress-area" id="progressArea" style="display: none;">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progressFill"></div>
+                            </div>
+                            <p class="progress-text" id="progressText">准备中...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="history-section">
+                <div class="history-header">
+                    <h3>历史记录</h3>
+                    <button class="btn btn-link" id="refreshHistoryBtn">刷新</button>
+                </div>
+                <div class="history-list" id="historyList">
+                    <p class="text-muted">暂无历史记录</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
