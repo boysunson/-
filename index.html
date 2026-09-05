@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>知航 · 多语种多学科在线学习平台</title>
+  <meta name="description" content="沉浸式在线学习平台，涵盖英语、日语、韩语、AI人工智能、AI工具应用、风水、房地产开发等多学科分级课程。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Noto+Serif+SC:wght@600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- 顶部导航 -->
+  <header class="nav" id="nav">
+    <div class="nav__inner">
+      <a class="nav__brand" href="#/" data-route>
+        <span class="brand__mark">知</span>
+        <span class="brand__name">知航 <em>ZhiHang</em></span>
+      </a>
+      <nav class="nav__links" id="nav-links">
+        <a href="#/" data-route>首页</a>
+        <a href="#/courses" data-route>课程</a>
+        <a href="#/dashboard" data-route data-need-auth>学习中心</a>
+        <a href="#/community" data-route>社区</a>
+      </nav>
+      <div class="nav__actions" id="nav-actions">
+        <!-- 动态渲染：登录/注册 或 用户菜单 -->
+      </div>
+      <button class="nav__toggle" id="nav-toggle" aria-label="菜单">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 主视图容器 -->
+  <main id="view" class="view"></main>
+
+  <!-- Toast 通知 -->
+  <div class="toast-stack" id="toast-stack"></div>
+
+  <!-- 模态框容器 -->
+  <div class="modal-layer" id="modal-layer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
