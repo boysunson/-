@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>纯粹数独</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Nunito",system-ui,-apple-system,sans-serif;
+    background:#FFF6EC;
+    background-image:
+      radial-gradient(circle at 8% 6%, #FFE7D4 0%, transparent 42%),
+      radial-gradient(circle at 94% 12%, #FFDFEA 0%, transparent 38%),
+      radial-gradient(circle at 50% 104%, #E4F7EE 0%, transparent 48%);
+    background-attachment:fixed;
+    min-height:100vh;color:#6B4F3F;
+    display:flex;justify-content:center;padding:16px 12px 34px;
+  }
+  .app{width:100%;max-width:560px;}
+
+  /* ---------- 顶部 ---------- */
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:0 4px;}
+  .title{font-size:22px;font-weight:800;letter-spacing:.5px;color:#7A5540;display:flex;align-items:center;gap:6px;}
+  .title .dot{color:#FF9E7A;}
+  .icon-btn{
+    width:42px;height:42px;border-radius:14px;border:none;background:#fff;
+    font-size:19px;cursor:pointer;box-shadow:0 4px 12px rgba(201,169,140,.2);
+    transition:transform .12s;
+  }
+  .icon-btn:active{transform:scale(.92);}
+
+  .seg{display:flex;gap:5px;background:#FFEFE2;padding:5px;border-radius:999px;width:fit-content;}
+  .seg button{
+    border:none;background:transparent;padding:8px 15px;border-radius:999px;
+    font-size:14px;font-weight:700;color:#B08A6E;cursor:pointer;transition:.2s;
+    font-family:inherit;
+  }
+  .seg button.active{background:#fff;color:#FF7A45;box-shadow:0 2px 8px rgba(255,158,122,.35);}
+
+  .statusbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .chips{display:flex;gap:7px;align-items:center;}
+  .chip{
+    display:inline-flex;align-items:center;gap:5px;background:#fff;border-radius:999px;
+    padding:8px 13px;font-size:13.5px;font-weight:700;color:#8A6A52;
+    box-shadow:0 3px 10px rgba(201,169,140,.15);border:none;font-family:inherit;
+    font-variant-numeric:tabular-nums;
+  }
+  .chip.btn{cursor:pointer;transition:transform .12s;}
+  .chip.btn:active{transform:scale(.94);}
+  .chip.timer{color:#FF7A45;}
+
+  /* ---------- 棋盘 ---------- */
+  .board-wrap{position:relative;display:flex;justify-content:center;margin-bottom:18px;}
+  .board{
+    display:grid;
+    width:var(--bw, min(92vw,500px));
+    aspect-ratio:1/1;
+    background:#FFFDFB;
+    border-radius:20px;
+    overflow:hidden;
+    box-shadow:0 10px 30px rgba(201,169,140,.28), 0 0 0 3px #fff;
+    user-select:none;
+    -webkit-user-select:none;
+  }
+  .cell{
+    position:relative;display:flex;align-items:center;justify-content:center;
+    border:1px solid #F2E3D3;background:#FFFDFB;cursor:pointer;
+    font-weight:800;line-height:1;
+    font-size:min(calc(var(--cell,44px) * .55), 40px);
+    transition:background-color .14s;
+  }
+  .cell.bl{box-shadow:inset -2.5px 0 0 #D8B99A;}
+  .cell.bt{box-shadow:inset 0 -2.5px 0 #D8B99A;}
+  .cell.bl.bt{box-shadow:inset -2.5px 0 0 #D8B99A, inset 0 -2.5px 0 #D8B99A;}
+
+  .cell .val{position:relative;z-index:2;}
+  .cell.given .val{color:#8B6B52;}
+  .cell.user .val{color:#FF7A45;}
+
+  .cell.peer{background:#FFF6EC;}
+  .cell.same{background:#FFEBD9;}
+  .cell.selected{background:#FFDCC2;}
+  .cell.conflict{background:#FFE1E1;}
+  .cell.conflict .val{color:#E5484D;}
+
+  .notes{
+    position:absolute;inset:2px;display:grid;gap:0;
+    align-content:center;justify-items:center;z-index:1;
+    font-size:min(calc(var(--cell,44px) * .24), 14px);
+    font-weight:700;color:#C9A98C;line-height:1.15;
+  }
+  .notes span{display:flex;align-items:center;justify-content:center;width:100%;height:100%;}
+
+  .pause-overlay{
+    position:absolute;inset:0;display:none;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;
+    background:rgba(255,247,238,.96);border-radius:20px;z-index:6;
+    backdrop-filter:blur(6px);
+  }
+  .pause-overlay.show{display:flex;}
+  .pause-overlay .big{font-size:17px;font-weight:800;color:#A9866C;letter-spacing:1px;}
+
+  /* ---------- 工具栏 ---------- */
+  .toolbar{display:flex;gap:8px;margin-bottom:14px;}
+  .tool{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    background:#fff;border:none;border-radius:18px;padding:10px 2px;
+    font-family:inherit;font-size:11.5px;font-weight:700;color:#9B7B62;
+    box-shadow:0 4px 12px rgba(201,169,140,.16);
+    cursor:pointer;transition:transform .12s,background .2s,box-shadow .2s;
+  }
+  .tool .ic{font-size:19px;line-height:1;}
+  .tool:active:not(:disabled){transform:translateY(2px) scale(.96);}
+  .tool.active{background:#FFE8D6;color:#FF7A45;box-shadow:inset 0 0 0 2px #FFC29E;}
+  .tool:disabled{opacity:.35;cursor:not-allowed;}
+
+  /* ---------- 数字键盘 ---------- */
+  .keypad{display:grid;gap:8px;margin-bottom:16px;}
+  .key{
+    height:56px;border:none;border-radius:18px;background:#fff;
+    font-family:inherit;font-size:23px;font-weight:800;color:#FF7A45;
+    box-shadow:0 4px 12px rgba(201,169,140,.18), inset 0 -3px 0 rgba(255,158,122,.14);
+    cursor:pointer;transition:transform .1s,background .15s;
+  }
+  .key:active{transform:scale(.93);background:#FFEFE2;}
+  .key.erase{color:#B08A6E;font-size:20px;background:#FBF3EA;}
+
+  /* ---------- 新开局 ---------- */
+  .newgame{
+    width:100%;height:56px;border:none;border-radius:20px;
+    background:linear-gradient(135deg,#FFB98F,#FF8F6B);
+    color:#fff;font-family:inherit;font-size:17px;font-weight:800;letter-spacing:1px;
+    box-shadow:0 8px 20px rgba(255,143,107,.4);
+    cursor:pointer;transition:transform .12s,box-shadow .12s;
+  }
+  .newgame:active{transform:translateY(2px);box-shadow:0 4px 12px rgba(255,143,107,.4);}
+
+  /* ---------- 弹窗 ---------- */
+  .modal{
+    position:fixed;inset:0;background:rgba(107,79,63,.32);
+    backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;
+    padding:20px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:50;
+  }
+  .modal.show{opacity:1;pointer-events:auto;}
+  .modal-card{
+    background:#fff;border-radius:28px;padding:26px 22px;width:100%;max-width:380px;
+    text-align:center;box-shadow:0 20px 50px rgba(107,79,63,.25);
+    transform:translateY(18px) scale(.95);transition:transform .32s cubic-bezier(.34,1.56,.64,1);
+    max-height:86vh;overflow:auto;
+  }
+  .modal.show .modal-card{transform:none;}
+  .modal-card .emoji{font-size:48px;line-height:1;margin-bottom:6px;}
+  .modal-card h2{margin:6px 0 4px;font-size:22px;color:#7A5540;}
+  .modal-card .sub{margin:0 0 18px;font-size:13.5px;color:#B08A6E;}
+
+  .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+  .result-grid>div{
+    background:#FFF6EC;border-radius:16px;padding:11px 8px;
+    display:flex;flex-direction:column;gap:3px;
+  }
+  .result-grid span{font-size:12px;color:#B08A6E;font-weight:700;}
+  .result-grid strong{font-size:17px;color:#FF7A45;font-variant-numeric:tabular-nums;}
+
+  .modal-btns{display:flex;flex-direction:column;gap:9px;}
+  .btn{
+    height:50px;border:none;border-radius:16px;font-family:inherit;
+    font-size:15px;font-weight:800;cursor:pointer;transition:transform .12s;
+    background:#FBF3EA;color:#9B7B62;
+  }
+  .btn:active{transform:scale(.97);}
+  .btn.primary{background:linear-gradient(135deg,#FFB98F,#FF8F6B);color:#fff;box-shadow:0 6px 16px rgba(255,143,107,.35);}
+  .btn.ghost{background:transparent;color:#C0A48D;}
+
+  .stat-row{
+    display:grid;grid-template-columns:62px 1fr 1fr 1fr;gap:6px;align-items:center;
+    background:#FFF9F3;border-radius:16px;padding:12px 10px;margin-bottom:9px;
+  }
+  .stat-name{font-weight:800;color:#7A5540;font-size:15px;text-align:left;padding-left:4px;}
+  .stat-item{display:flex;flex-direction:column;gap:2px;}
+  .stat-item span{font-size:11px;color:#B08A6E;font-weight:700;}
+  .stat-item strong{font-size:14px;color:#FF7A45;font-variant-numeric:tabular-nums;}
+
+  /* ---------- Toast ---------- */
+  #toast{
+    position:fixed;left:50%;bottom:40px;transform:translate(-50%,20px);
+    background:rgba(107,79,63,.92);color:#fff;padding:11px 20px;border-radius:999px;
+    font-size:13.5px;font-weight:700;opacity:0;pointer-events:none;
+    transition:opacity .25s,transform .25s;z-index:99;white-space:nowrap;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0);}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="title">🍡 纯粹数独<span class="dot">·</span></div>
+    <button class="icon-btn" id="statsBtn" title="战绩统计">📊</button>
+  </div>
+
+  <div class="statusbar">
+    <div class="seg" id="sizeSeg">
+      <button data-size="4">4×4</button>
+      <button data-size="6">6×6</button>
+      <button data-size="9" class="active">9×9</button>
+    </div>
+    <div class="chips">
+      <span class="chip" id="diffChip">适中</span>
+      <span class="chip timer" id="timerChip">⏱ 00:00</span>
+      <button class="chip btn" id="pauseBtn">⏸ 暂停</button>
+    </div>
+  </div>
+
+  <div class="board-wrap">
+    <div class="board" id="board"></div>
+    <div class="pause-overlay" id="pauseOverlay">
+      <div style="font-size:40px">😴</div>
+      <div class="big">游戏已暂停</div>
+      <button class="btn primary" id="resumeBtn" style="width:150px">继续游戏</button>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button class="tool" id="undoBtn"><span class="ic">↩️</span><span>撤销</span></button>
+    <button class="tool" id="eraseBtn"><span class="ic">🧽</span><span>擦除</span></button>
+    <button class="tool" id="pencilBtn"><span class="ic">✏️</span><span>笔记</span></button>
+    <button class="tool" id="hintBtn"><span class="ic">💡</span><span>提示</span></button>
+    <button class="tool" id="restartBtn"><span class="ic">🔄</span><span>重玩</span></button>
+  </div>
+
+  <div class="keypad" id="keypad"></div>
+
+  <button class="newgame" id="newGameBtn">✨ 新开局</button>
+</div>
+
+<!-- 通关结算 -->
+<div class="modal" id="winModal">
+  <div class="modal-card">
+    <div class="emoji">🎉</div>
+    <h2>通关啦！</h2>
+    <p class="sub">你太棒啦，数独小达人～</p>
+    <div class="result-grid">
+      <div><span>规格</span><strong id="rSize">9×9</strong></div>
+      <div><span>用时</span><strong id="rTime">00:00</strong></div>
+      <div><span>提示次数</span><strong id="rHints">0</strong></div>
+      <div><span>错误次数</span><strong id="rErrors">0</strong></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn primary" id="againBtn">再来一局</button>
+      <button class="btn" id="viewStatsBtn">查看统计</button>
+      <button class="btn ghost" id="closeWinBtn">返回</button>
+    </div>
+  </div>
+</div>
+
+<!-- 战绩统计 -->
+<div class="modal" id="statsModal">
+  <div class="modal-card">
+    <div class="emoji">📊</div>
+    <h2>我的战绩</h2>
+    <p class="sub">每一次通关都被好好记住啦</p>
+    <div id="statsList"></div>
+    <div class="modal-btns" style="margin-top:14px">
+      <button class="btn primary" id="closeStatsBtn">好的</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* =========================================================
+   纯粹数独 —— 逻辑实现
+   ========================================================= */
+
+/* ---------- 规格配置 ---------- */
+const SPEC = {
+  4: { boxR: 2, boxC: 2, minClues: 5,  noteCols: 2, boardW: 330 },
+  6: { boxR: 2, boxC: 3, minClues: 10, noteCols: 3, boardW: 400 },
+  9: { boxR: 3, boxC: 3, minClues: 27, noteCols: 3, boardW: 500 }
+};
+
+/* ---------- 全局状态 ---------- */
+const state = {
+  n: 9, boxR: 3, boxC: 3, noteCols: 3,
+  puzzle: [], solution: [], board: [], notes: [],
+  history: [], selected: null,
+  pencil: false, paused: false, finished: false,
+  elapsed: 0, hints: 0, errors: 0
+};
+
+/* ---------- DOM ---------- */
+const boardEl     = document.getElementById('board');
+const keypadEl    = document.getElementById('keypad');
+const pauseOverlay= document.getElementById('pauseOverlay');
+const pauseBtn    = document.getElementById('pauseBtn');
+const timerChip   = document.getElementById('timerChip');
+const diffChip    = document.getElementById('diffChip');
+const undoBtn     = document.getElementById('undoBtn');
+const eraseBtn    = document.getElementById('eraseBtn');
+const pencilBtn   = document.getElementById('pencilBtn');
+const hintBtn     = document.getElementById('hintBtn');
+const restartBtn  = document.getElementById('restartBtn');
+const winModal    = document.getElementById('winModal');
+const statsModal  = document.getElementById('statsModal');
+
+/* ---------- 工具函数 ---------- */
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+function fmt(sec){
+  const m = Math.floor(sec/60), s = sec%60;
+  return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 1800);
+}
+function boxIdx(i){
+  const n = state.n;
+  const r = Math.floor(i/n), c = i%n;
+  return Math.floor(r/state.boxR) * (n/state.boxC) + Math.floor(c/state.boxC);
+}
+
+/* =========================================================
+   谜题生成（随机 + 唯一解）
+   ========================================================= */
+function generateFull(n, boxR, boxC){
+  const N = n*n;
+  const g = new Array(N).fill(0);
+  const rows = new Int32Array(n), cols = new Int32Array(n), boxes = new Int32Array(n);
+  const bpr = n / boxC;
+  const bidx = (r,c) => ((r/boxR)|0)*bpr + ((c/boxC)|0);
+  const full = (1<<n) - 1;
+
+  function rec(pos){
+    if(pos === N) return true;
+    const r = (pos/n)|0, c = pos % n, bx = bidx(r,c);
+    const avail = full & ~(rows[r] | cols[c] | boxes[bx]);
+    if(!avail) return false;
+    const cands = [];
+    for(let v=1; v<=n; v++) if(avail & (1<<(v-1))) cands.push(v);
+    shuffle(cands);
+    for(const v of cands){
+      const bit = 1 << (v-1);
+      g[pos] = v; rows[r] |= bit; cols[c] |= bit; boxes[bx] |= bit;
+      if(rec(pos+1)) return true;
+      g[pos] = 0; rows[r] &= ~bit; cols[c] &= ~bit; boxes[bx] &= ~bit;
+    }
+    return false;
+  }
+  rec(0);
+  return g;
+}
+
+function countSolutions(grid, n, boxR, boxC, limit){
+  const N = n*n;
+  const g = grid.slice();
+  const rows = new Int32Array(n), cols = new Int32Array(n), boxes = new Int32Array(n);
+  const bpr = n / boxC;
+  const bidx = (r,c) => ((r/boxR)|0)*bpr + ((c/boxC)|0);
+  const bitVal = new Int32Array(1<<n);
+  for(let v=1; v<=n; v++) bitVal[1<<(v-1)] = v;
+
+  for(let i=0;i<N;i++){
+    const v = g[i];
+    if(v){
+      const bit = 1<<(v-1), r = (i/n)|0, c = i%n, bx = bidx(r,c);
+      rows[r] |= bit; cols[c] |= bit; boxes[bx] |= bit;
+    }
+  }
+  const full = (1<<n) - 1;
+  let count = 0;
+
+  function rec(){
+    if(count >= limit) return;
+    let best = -1, bestMask = 0, bestCnt = 99;
+    for(let i=0;i<N;i++){
+      if(g[i]) continue;
+      const r = (i/n)|0, c = i%n;
+      const avail = full & ~(rows[r] | cols[c] | boxes[bidx(r,c)]);
+      if(avail === 0) return;
+      let cnt = 0, m = avail;
+      while(m){ m &= m-1; cnt++; }
+      if(cnt < bestCnt){
+        bestCnt = cnt; best = i; bestMask = avail;
+        if(cnt === 1) break;
+      }
+    }
+    if(best === -1){ count++; return; }
+    const r = (best/n)|0, c = best % n, bx = bidx(r,c);
+    let m = bestMask;
+    while(m){
+      const bit = m & -m; m ^= bit;
+      g[best] = bitVal[bit];
+      rows[r] |= bit; cols[c] |= bit; boxes[bx] |= bit;
+      rec();
+      rows[r] &= ~bit; cols[c] &= ~bit; boxes[bx] &= ~bit;
+      g[best] = 0;
+      if(count >= limit) return;
+    }
+  }
+  rec();
+  return count;
+}
+
+function generatePuzzle(n){
+  const spec = SPEC[n];
+  const solution = generateFull(n, spec.boxR, spec.boxC);
+  const puzzle = solution.slice();
+  const order = shuffle([...Array(n*n).keys()]);
+  let clues = n*n;
+
+  for(const idx of order){
+    if(clues <= spec.minClues) break;
+    const backup = puzzle[idx];
+    puzzle[idx] = 0;
+    if(countSolutions(puzzle, n, spec.boxR, spec.boxC, 2) !== 1){
+      puzzle[idx] = backup;
+    }else{
+      clues--;
+    }
+  }
+  return { puzzle, solution };
+}
+
+/* =========================================================
+   核心游戏逻辑
+   ========================================================= */
+function computeConflicts(){
+  const n = state.n, board = state.board;
+  const bad = new Set();
+  const groups = [];
+  for(let r=0;r<n;r++){
+    const g = [];
+    for(let c=0;c<n;c++) g.push(r*n+c);
+    groups.push(g);
+  }
+  for(let c=0;c<n;c++){
+    const g = [];
+    for(let r=0;r<n;r++) g.push(r*n+c);
+    groups.push(g);
+  }
+  for(let b=0;b<n;b++){
+    const g = [];
+    for(let i=0;i<n*n;i++) if(boxIdx(i) === b) g.push(i);
+    groups.push(g);
+  }
+  for(const g of groups){
+    const map = new Map();
+    for(const i of g){
+      const v = board[i];
+      if(!v) continue;
+      if(!map.has(v)) map.set(v, []);
+      map.get(v).push(i);
+    }
+    map.forEach(arr => { if(arr.length > 1) arr.forEach(i => bad.add(i)); });
+  }
+  return bad;
+}
+
+function snapshot(i){
+  return { idx: i, value: state.board[i], notes: new Set(state.notes[i]) };
+}
+
+function inputNumber(v){
+  if(state.paused || state.finished) return;
+  const i = state.selected;
+  if(i === null || i === undefined) return;
+  if(state.puzzle[i] !== 0) return;          // 初始固定格禁止修改
+
+  const before = snapshot(i);
+
+  if(state.pencil){
+    if(state.board[i] !== 0){
+      state.board[i] = 0;
+      state.notes[i].clear();
+    }
+    if(state.notes[i].has(v)) state.notes[i].delete(v);
+    else state.notes[i].add(v);
+    state.history.push(before);
+    render();
+    return;
+  }
+
+  if(state.board[i] === v){
+    state.board[i] = 0;                      // 再次点击同数字 → 取消
+  }else{
+    state.board[i] = v;
+    state.notes[i].clear();
+    if(wouldConflict(i)){
+      state.errors++;
+    }
+  }
+  state.history.push(before);
+
+  const won = checkWin();
+  render();
+  if(won) showWin();
+}
+
+function wouldConflict(i){
+  const n = state.n, v = state.board[i];
+  if(!v) return false;
+  const r = (i/n)|0, c = i%n, b = boxIdx(i);
+  for(let j=0;j<n*n;j++){
+    if(j === i) continue;
+    if(state.board[j] !== v) continue;
+    const r2 = (j/n)|0, c2 = j%n;
+    if(r2 === r || c2 === c || boxIdx(j) === b) return true;
+  }
+  return false;
+}
+
+function checkWin(){
+  if(state.finished) return false;
+  for(let i=0;i<state.board.length;i++) if(state.board[i] === 0) return false;
+  if(computeConflicts().size > 0) return false;
+
+  state.finished = true;
+  recordWin();
+  return true;
+}
+
+/* ---------- 操作 ---------- */
+function doUndo(){
+  if(state.paused || state.finished) return;
+  if(!state.history.length) return;
+  const h = state.history.pop();
+  state.board[h.idx] = h.value;
+  state.notes[h.idx] = new Set(h.notes);
+  render();
+}
+
+function doErase(){
+  if(state.paused || state.finished) return;
+  const i = state.selected;
+  if(i === null || i === undefined) return;
+  if(state.puzzle[i] !== 0) return;
+  if(state.board[i] === 0 && state.notes[i].size === 0) return;
+  state.history.push(snapshot(i));
+  state.board[i] = 0;
+  state.notes[i].clear();
+  render();
+}
+
+function doHint(){
+  if(state.paused || state.finished) return;
+  const i = state.selected;
+  if(i === null || i === undefined){ toast('请先选择一个空格哦～'); return; }
+  if(state.puzzle[i] !== 0){ toast('这一格是题目给的，不用填啦～'); return; }
+  if(state.board[i] !== 0){ toast('这一格已经填过啦～'); return; }
+
+  state.history.push(snapshot(i));
+  state.board[i] = state.solution[i];
+  state.notes[i].clear();
+  state.hints++;
+
+  const won = checkWin();
+  render();
+  if(won) showWin();
+}
+
+function doRestart(){
+  if(state.paused && !state.finished) return;
+  state.board = state.puzzle.slice();
+  state.notes = Array.from({length: state.n*state.n}, () => new Set());
+  state.history = [];
+  state.selected = null;
+  state.elapsed = 0;
+  state.hints = 0;
+  state.errors = 0;
+  state.finished = false;
+  updateTimerUI();
+  render();
+  toast('已重置到开局状态');
+}
+
+function togglePause(){
+  if(state.finished) return;
+  state.paused = !state.paused;
+  pauseOverlay.classList.toggle('show', state.paused);
+  pauseBtn.textContent = state.paused ? '▶ 继续' : '⏸ 暂停';
+  updateToolbar();
+}
+
+/* =========================================================
+   渲染
+   ========================================================= */
+function updateCellSize(){
+  const w = boardEl.clientWidth;
+  if(w) boardEl.style.setProperty('--cell', (w / state.n) + 'px');
+}
+
+function renderBoard(){
+  const n = state.n;
+  const conflicts = computeConflicts();
+  const sel = state.selected;
+  const selVal = (sel !== null && state.board[sel]) ? state.board[sel] : 0;
+  const selR = sel !== null ? Math.floor(sel/n) : -1;
+  const selC = sel !== null ? sel % n : -1;
+  const selB = sel !== null ? boxIdx(sel) : -1;
+
+  boardEl.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+  boardEl.innerHTML = '';
+  const frag = document.createDocumentFragment();
+
+  for(let i=0;i<n*n;i++){
+    const r = Math.floor(i/n), c = i % n;
+    const d = document.createElement('div');
+    d.className = 'cell';
+    d.dataset.idx = i;
+
+    if((c+1) % state.boxC === 0 && c !== n-1) d.classList.add('bl');
+    if((r+1) % state.boxR === 0 && r !== n-1) d.classList.add('bt');
+
+    const v = state.board[i];
+    if(state.puzzle[i] !== 0) d.classList.add('given');
+    else if(v !== 0) d.classList.add('user');
+
+    if(sel !== null){
+      if(i === sel) d.classList.add('selected');
+      else if(r === selR || c === selC || boxIdx(i) === selB) d.classList.add('peer');
+      if(selVal && v === selVal && i !== sel) d.classList.add('same');
+    }
+    if(conflicts.has(i)) d.classList.add('conflict');
+
+    if(v !== 0){
+      const s = document.createElement('span');
+      s.className = 'val';
+      s.textContent = v;
+      d.appendChild(s);
+    }else if(state.notes[i] && state.notes[i].size){
+      const nd = document.createElement('div');
+      nd.className = 'notes';
+      nd.style.gridTemplateColumns = `repeat(${state.noteCols}, 1fr)`;
+      for(let k=1;k<=n;k++){
+        const sp = document.createElement('span');
+        sp.textContent = state.notes[i].has(k) ? k : '';
+        nd.appendChild(sp);
+      }
+      d.appendChild(nd);
+    }
+    frag.appendChild(d);
+  }
+  boardEl.appendChild(frag);
+  updateCellSize();
+}
+
+function renderKeypad(){
+  const n = state.n;
+  keypadEl.innerHTML = '';
+  keypadEl.style.gridTemplateColumns = `repeat(${Math.min(n+1,5)}, 1fr)`;
+  for(let v=1; v<=n; v++){
+    const b = document.createElement('button');
+    b.className = 'key';
+    b.textContent = v;
+    b.dataset.v = v;
+    keypadEl.appendChild(b);
+  }
+  const e = document.createElement('button');
+  e.className = 'key erase';
+  e.textContent = '⌫';
+  e.dataset.v = '0';
+  keypadEl.appendChild(e);
+}
+
+function updateToolbar(){
+  const locked = state.paused || state.finished;
+  undoBtn.disabled    = locked || state.history.length === 0;
+  eraseBtn.disabled   = locked;
+  pencilBtn.disabled  = locked;
+  hintBtn.disabled    = locked;
+  restartBtn.disabled = locked;
+  pencilBtn.classList.toggle('active', state.pencil);
+  pauseBtn.disabled = state.finished;
+}
+
+function render(){
+  renderBoard();
+  updateToolbar();
+}
+
+function updateTimerUI(){
+  timerChip.textContent = '⏱ ' + fmt(state.elapsed);
+}
+
+/* =========================================================
+   新开局
+   ========================================================= */
+function newGame(size){
+  if(size) state.n = size;
+  const n = state.n;
+  const spec = SPEC[n];
+  state.boxR = spec.boxR;
+  state.boxC = spec.boxC;
+  state.noteCols = spec.noteCols;
+
+  boardEl.style.setProperty('--bw', `min(92vw, ${spec.boardW}px)`);
+
+  const { puzzle, solution } = generatePuzzle(n);
+  state.puzzle   = puzzle;
+  state.solution = solution;
+  state.board    = puzzle.slice();
+  state.notes    = Array.from({length:n*n}, () => new Set());
+  state.history  = [];
+  state.selected = null;
+  state.pencil   = false;
+  state.paused   = false;
+  state.finished = false;
+  state.elapsed  = 0;
+  state.hints    = 0;
+  state.errors   = 0;
+
+  pauseOverlay.classList.remove('show');
+  pauseBtn.textContent = '⏸ 暂停';
+
+  // 难度标签
+  const clues = puzzle.filter(x => x !== 0).length;
+  const ratio = clues / (n*n);
+  diffChip.textContent = ratio > 0.5 ? '轻松' : (ratio > 0.34 ? '适中' : '挑战');
+
+  // 规格按钮状态
+  document.querySelectorAll('#sizeSeg button').forEach(b=>{
+    b.classList.toggle('active', +b.dataset.size === n);
+  });
+
+  updateTimerUI();
+  renderKeypad();
+  render();
+}
+
+/* =========================================================
+   计时器
+   ========================================================= */
+setInterval(()=>{
+  if(state.paused || state.finished) return;
+  if(state.board.length === 0) return;
+  state.elapsed++;
+  updateTimerUI();
+}, 1000);
+
+/* =========================================================
+   战绩统计
+   ========================================================= */
+const STATS_KEY = 'pureSudokuStats_v1';
+function defaultStats(){
+  return {
+    4: { games:0, best:null, total:0 },
+    6: { games:0, best:null, total:0 },
+    9: { games:0, best:null, total:0 }
+  };
+}
+function loadStats(){
+  try{
+    const raw = localStorage.getItem(STATS_KEY);
+    if(!raw) return defaultStats();
+    const obj = JSON.parse(raw);
+    const d = defaultStats();
+    [4,6,9].forEach(n=>{
+      if(obj && obj[n]){
+        d[n].games = obj[n].games || 0;
+        d[n].best  = (typeof obj[n].best === 'number') ? obj[n].best : null;
+        d[n].total = obj[n].total || 0;
+      }
+    });
+    return d;
+  }catch(e){ return defaultStats(); }
+}
+function saveStats(s){
+  try{ localStorage.setItem(STATS_KEY, JSON.stringify(s)); }catch(e){}
+}
+function recordWin(){
+  const s = loadStats();
+  const n = state.n;
+  s[n].games++;
+  s[n].total += state.elapsed;
+  if(s[n].best === null || state.elapsed < s[n].best) s[n].best = state.elapsed;
+  saveStats(s);
+}
+
+function renderStats(){
+  const s = loadStats();
+  const list = document.getElementById('statsList');
+  list.innerHTML = '';
+  [4,6,9].forEach(n=>{
+    const d = s[n];
+    const row = document.createElement('div');
+    row.className = 'stat-row';
+    row.innerHTML = `
+      <div class="stat-name">${n}×${n}</div>
+      <div class="stat-item"><span>完局</span><strong>${d.games}</strong></div>
+      <div class="stat-item"><span>最佳</span><strong>${d.best !== null ? fmt(d.best) : '--:--'}</strong></div>
+      <div class="stat-item"><span>平均</span><strong>${d.games ? fmt(Math.round(d.total/d.games)) : '--:--'}</strong></div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+/* =========================================================
+   弹窗控制
+   ========================================================= */
+function showWin(){
+  document.getElementById('rSize').textContent   = `${state.n}×${state.n}`;
+  document.getElementById('rTime').textContent   = fmt(state.elapsed);
+  document.getElementById('rHints').textContent  = state.hints;
+  document.getElementById('rErrors').textContent = state.errors;
+  winModal.classList.add('show');
+  updateToolbar();
+}
+function hideWin(){ winModal.classList.remove('show'); }
+function showStats(){ renderStats(); statsModal.classList.add('show'); }
+function hideStats(){ statsModal.classList.remove('show'); }
+
+/* =========================================================
+   事件绑定
+   ========================================================= */
+boardEl.addEventListener('click', (e)=>{
+  const cell = e.target.closest('.cell');
+  if(!cell) return;
+  if(state.paused || state.finished) return;
+  state.selected = +cell.dataset.idx;
+  render();
+});
+
+keypadEl.addEventListener('click', (e)=>{
+  const key = e.target.closest('.key');
+  if(!key) return;
+  if(state.paused || state.finished) return;
+  const v = +key.dataset.v;
+  if(v === 0) doErase();
+  else inputNumber(v);
+});
+
+document.getElementById('sizeSeg').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  const size = +btn.dataset.size;
+  if(size === state.n && !state.finished) {
+    // 同规格也重新生成
+  }
+  newGame(size);
+});
+
+undoBtn.addEventListener('click', doUndo);
+eraseBtn.addEventListener('click', doErase);
+hintBtn.addEventListener('click', doHint);
+restartBtn.addEventListener('click', doRestart);
+
+pencilBtn.addEventListener('click', ()=>{
+  if(state.paused || state.finished) return;
+  state.pencil = !state.pencil;
+  updateToolbar();
+  toast(state.pencil ? '铅笔模式：开 ✏️' : '铅笔模式：关');
+});
+
+pauseBtn.addEventListener('click', togglePause);
+document.getElementById('resumeBtn').addEventListener('click', togglePause);
+
+document.getElementById('newGameBtn').addEventListener('click', ()=>{
+  if(state.paused) togglePause();
+  newGame(state.n);
+});
+
+document.getElementById('statsBtn').addEventListener('click', showStats);
+document.getElementById('closeStatsBtn').addEventListener('click', hideStats);
+statsModal.addEventListener('click', (e)=>{ if(e.target === statsModal) hideStats(); });
+
+document.getElementById('againBtn').addEventListener('click', ()=>{
+  hideWin();
+  newGame(state.n);
+});
+document.getElementById('closeWinBtn').addEventListener('click', hideWin);
+document.getElementById('viewStatsBtn').addEventListener('click', ()=>{
+  hideWin();
+  showStats();
+});
+
+/* 键盘操作 */
+document.addEventListener('keydown', (e)=>{
+  if(winModal.classList.contains('show') || statsModal.classList.contains('show')) return;
+  if(state.paused || state.finished) return;
+  if(e.key >= '1' && e.key <= '9'){
+    const v = +e.key;
+    if(v <= state.n) inputNumber(v);
+  }else if(e.key === 'Backspace' || e.key === 'Delete'){
+    doErase();
+  }else if(e.key === 'z' && (e.ctrlKey || e.metaKey)){
+    e.preventDefault();
+    doUndo();
+  }
+});
+
+window.addEventListener('resize', updateCellSize);
+
+/* =========================================================
+   启动
+   ========================================================= */
+newGame(9);
+</script>
+</body>
+</html>
